@@ -206,4 +206,10 @@ Sois concis, clair et pédagogique.`;
     
   } catch (error) {
     console.error('Erreur serveur détaillée:', error.message, error.stack);
-    return res.status(500).json({
+    return res.status(500).json({ 
+      error: 'Erreur interne du serveur',
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+}
