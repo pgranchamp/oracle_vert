@@ -71,6 +71,14 @@ export default function Home() {
     }
   };
   
+  // Ajout d'un log de débogage pour voir ce qui est reçu
+  console.log("État actuel:", { 
+    hasImage: !!selectedImage, 
+    isLoading, 
+    hasError: !!error, 
+    diagnosisReceived: diagnosis ? Object.keys(diagnosis) : null
+  });
+  
   return (
     <div className="flex flex-col min-h-screen bg-green-50">
       <Head>
@@ -104,6 +112,19 @@ export default function Home() {
       </main>
       
       <Footer />
+      
+      {/* Ajout d'un bouton de rafraîchissement pour forcer le rechargement (temporaire) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 right-4">
+          <button 
+            onClick={() => window.location.reload(true)}
+            className="bg-blue-500 text-white p-2 rounded-full shadow-lg"
+            title="Forcer le rafraîchissement"
+          >
+            Recharger
+          </button>
+        </div>
+      )}
     </div>
   );
 }
