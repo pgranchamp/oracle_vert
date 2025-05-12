@@ -36,7 +36,7 @@ const ImagePreview = ({ imagePreview, onAnalyze, isLoading, uploadProgress }) =>
               className="bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded-full flex items-center shadow-lg"
             >
               <Check size={20} className="mr-2" />
-              Analyser cette plante
+              Cliquez pour analyser cette plante
             </button>
           )}
         </div>
