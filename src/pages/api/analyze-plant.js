@@ -2,6 +2,15 @@
 import Cors from 'cors';
 import { nanoid } from 'nanoid';
 
+// Configuration pour augmenter la limite de taille
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb', // Augmentation de la limite à 10MB
+    },
+  },
+};
+
 // Initialisation du middleware CORS
 const cors = Cors({
   methods: ['POST'],
@@ -40,13 +49,13 @@ const validateImage = (base64Image) => {
     return { valid: false, message: 'Type d\'image non autorisé. Utilisez JPG, PNG, WEBP, HEIC ou HEIF' };
   }
 
-  // Vérifier la taille de l'image (max 5MB)
+  // Vérifier la taille de l'image (max 8MB)
   const base64Data = base64Image.replace(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,/, '');
   const sizeInBytes = Math.ceil((base64Data.length * 3) / 4);
-  const maxSize = 5 * 1024 * 1024; // 5MB
+  const maxSize = 8 * 1024 * 1024; // 8MB
   
   if (sizeInBytes > maxSize) {
-    return { valid: false, message: 'Image trop volumineuse (max 5MB)' };
+    return { valid: false, message: 'Image trop volumineuse (max 8MB)' };
   }
 
   return { valid: true };
