@@ -2,7 +2,6 @@
  * Service pour l'analyse de plantes
  * Gère la communication avec l'API serverless
  */
-import { processImageForUpload } from '../utils/imageCompression';
 
 // Analyser une image de plante
 export const analyzePlant = async (base64Image, progressCallback) => {
@@ -49,6 +48,12 @@ export const analyzePlant = async (base64Image, progressCallback) => {
     
     console.log("Résultat d'analyse obtenu:", result);
     
+    // Vérifier si le résultat contient l'identification
+    if (!result.identification) {
+      console.warn("⚠️ La réponse ne contient pas d'identification - Format de réponse incorrect");
+      console.log("Contenu complet de la réponse:", JSON.stringify(result));
+    }
+    
     // Signaler que l'analyse est terminée
     if (progressCallback) progressCallback(100);
     
@@ -59,23 +64,21 @@ export const analyzePlant = async (base64Image, progressCallback) => {
   }
 };
 
-// Fonction utilitaire pour lire un fichier en base64 avec compression
-export const readFileAsBase64 = async (file) => {
-  try {
-    // Utiliser la compression d'image
-    const compressedBase64 = await processImageForUpload(file);
-    return compressedBase64;
-  } catch (error) {
-    console.error('Erreur lors de la compression de l\'image:', error);
+// Fonction utilitaire pour lire un fichier en base64
+export const readFileAsBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
     
-    // Fallback sur la méthode standard sans compression en cas d'erreur
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
+    reader.onload = () => {
+      resolve(reader.result);
+    };
+    
+    reader.onerror = (error) => {
+      reject(error);
+    };
+    
+    reader.readAsDataURL(file);
+  });
 };
 
 // Validation des images
@@ -99,4 +102,17 @@ export const validateImage = (file) => {
   }
   
   return { isValid: true };
+};
+
+// Fonction de test pour déboguer la réponse API
+export const testDebugResponse = async () => {
+  try {
+    const response = await fetch('/api/debug-response');
+    const result = await response.json();
+    console.log("Test de la réponse de débogage:", result);
+    return result;
+  } catch (error) {
+    console.error('Erreur lors du test de débogage:', error);
+    throw error;
+  }
 };
