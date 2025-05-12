@@ -2,18 +2,18 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  output: 'standalone', // Améliore la compatibilité avec Vercel
   images: {
     domains: ['localhost'],
     formats: ['image/avif', 'image/webp'],
   },
-  // Configuration pour les API routes
-  api: {
+  // Configuration pour les API routes doit être dans apiConfig
+  apiConfig: {
     bodyParser: {
       sizeLimit: '8mb', // Limite la taille des requêtes pour éviter les abus
     },
-    responseLimit: false,
   },
-  // Configuration pour les en-têtes HTTP
+  // En-têtes HTTP
   async headers() {
     return [
       {
