@@ -2,6 +2,7 @@
  * Service pour l'analyse de plantes
  * Gère la communication avec l'API serverless
  */
+import { processImageForUpload } from '../utils/imageCompression';
 
 // Analyser une image de plante
 export const analyzePlant = async (base64Image, progressCallback) => {
@@ -58,21 +59,23 @@ export const analyzePlant = async (base64Image, progressCallback) => {
   }
 };
 
-// Fonction utilitaire pour lire un fichier en base64
-export const readFileAsBase64 = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+// Fonction utilitaire pour lire un fichier en base64 avec compression
+export const readFileAsBase64 = async (file) => {
+  try {
+    // Utiliser la compression d'image
+    const compressedBase64 = await processImageForUpload(file);
+    return compressedBase64;
+  } catch (error) {
+    console.error('Erreur lors de la compression de l\'image:', error);
     
-    reader.onload = () => {
-      resolve(reader.result);
-    };
-    
-    reader.onerror = (error) => {
-      reject(error);
-    };
-    
-    reader.readAsDataURL(file);
-  });
+    // Fallback sur la méthode standard sans compression en cas d'erreur
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
 };
 
 // Validation des images
