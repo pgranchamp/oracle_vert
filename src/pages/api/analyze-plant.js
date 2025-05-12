@@ -63,23 +63,44 @@ const validateImage = (base64Image) => {
 
 // Handler principal
 export default async function handler(req, res) {
+  console.log("API appelée: /api/analyze-plant");
+  
   // Exécution des middlewares
   await runMiddleware(req, res, cors);
   
   // Vérification de la méthode
   if (req.method !== 'POST') {
+    console.log("Méthode non autorisée:", req.method);
     return res.status(405).json({ error: 'Méthode non autorisée' });
   }
 
   try {
+    console.log("Début du traitement de la requête");
+    
+    // Vérification que la clé API est définie
+    if (!process.env.OPENAI_API_KEY) {
+      console.error("Erreur critique: Clé API OpenAI non définie");
+      return res.status(500).json({ error: 'Configuration du serveur incomplète: clé API manquante' });
+    }
+    
+    // Vérification de la présence de l'image
+    if (!req.body || !req.body.image) {
+      console.log("Erreur: Image manquante dans la requête");
+      return res.status(400).json({ error: 'Image manquante dans la requête' });
+    }
+    
     // Extraction de l'image du corps de la requête
     const { image } = req.body;
+    console.log("Image extraite, taille:", image.length);
     
     // Validation de l'image
     const validationResult = validateImage(image);
     if (!validationResult.valid) {
+      console.log("Validation de l'image échouée:", validationResult.message);
       return res.status(400).json({ error: validationResult.message });
     }
+    
+    console.log("Image validée avec succès");
 
     // Préparation des données pour OpenAI
     const prompt = `Tu es un expert en botanique. Voici une photo d'une plante montrant des signes de souffrance.
@@ -92,7 +113,7 @@ Sois concis, clair et pédagogique.`;
 
     // Génération d'un ID unique pour cette analyse (pour logging/debugging)
     const analysisId = nanoid(10);
-    console.log(`Traitement de l'analyse ${analysisId}`);
+    console.log(`Traitement de l'analyse ${analysisId} - Appel API OpenAI en cours`);
 
     // Appel à l'API OpenAI
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -126,16 +147,33 @@ Sois concis, clair et pédagogique.`;
       })
     });
 
+    console.log(`Réponse reçue de l'API OpenAI, statut: ${openaiResponse.status}`);
+    
+    // Si la réponse n'est pas OK, logger et renvoyer l'erreur
+    if (!openaiResponse.ok) {
+      const errorText = await openaiResponse.text();
+      console.error(`Erreur API OpenAI pour l'analyse ${analysisId}:`, openaiResponse.status, errorText);
+      return res.status(openaiResponse.status).json({ 
+        error: `Erreur lors de l'analyse par l'IA: ${openaiResponse.status}`,
+        details: errorText
+      });
+    }
+
     // Traitement de la réponse
     const result = await openaiResponse.json();
+    console.log(`Réponse JSON analysée pour l'analyse ${analysisId}`);
     
     if (result.error) {
-      console.error(`Erreur API OpenAI pour l'analyse ${analysisId}:`, result.error);
-      return res.status(500).json({ error: 'Erreur lors de l\'analyse par l\'IA' });
+      console.error(`Erreur OpenAI pour l'analyse ${analysisId}:`, result.error);
+      return res.status(500).json({ 
+        error: 'Erreur de l\'API OpenAI',
+        details: result.error 
+      });
     }
     
     // Extraction du contenu
     const content = result.choices[0].message.content;
+    console.log(`Contenu extrait de la réponse pour l'analyse ${analysisId}`);
     
     // Parsing simple du texte pour extraire les sections
     const diagnosisMatch = content.match(/diagnostic.*?:(.+?)(?=traitement|\n\d|\n$)/is);
@@ -148,11 +186,17 @@ Sois concis, clair et pédagogique.`;
       followUp: followUpMatch ? followUpMatch[1].trim() : "Suivi non disponible"
     };
     
+    console.log(`Analyse ${analysisId} terminée avec succès, réponse formatée`);
+    
     // Envoi de la réponse formatée
     return res.status(200).json(parsedResponse);
     
   } catch (error) {
-    console.error('Erreur serveur:', error);
-    return res.status(500).json({ error: 'Erreur interne du serveur' });
+    console.error('Erreur serveur détaillée:', error.message, error.stack);
+    return res.status(500).json({ 
+      error: 'Erreur interne du serveur',
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }
