@@ -1,26 +1,11 @@
-// api/analyze-plant.js
-import { createRouter } from 'next/router';
-
-// Importation des middleware pour la sécurité
+// src/pages/api/analyze-plant.js
 import Cors from 'cors';
-import rateLimit from 'express-rate-limit';
 import { nanoid } from 'nanoid';
 
 // Initialisation du middleware CORS
 const cors = Cors({
   methods: ['POST'],
-  origin: process.env.NODE_ENV === 'production' 
-    ? 'https://votre-domaine-de-production.vercel.app' 
-    : 'http://localhost:3000'
-});
-
-// Configuration du rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // limite chaque IP à 10 requêtes par fenêtre
-  message: { error: 'Trop de requêtes, veuillez réessayer plus tard' },
-  standardHeaders: true, // Retourne les headers `RateLimit-*` standards
-  legacyHeaders: false, // Désactive les headers `X-RateLimit-*`
+  origin: '*',
 });
 
 // Helper pour exécuter les middlewares
@@ -144,8 +129,6 @@ Sois concis, clair et pédagogique.`;
     const content = result.choices[0].message.content;
     
     // Parsing simple du texte pour extraire les sections
-    // Note: Ceci est une approche basique, vous pourriez avoir besoin d'adapter
-    // le parsing en fonction des réponses réelles de GPT-4o
     const diagnosisMatch = content.match(/diagnostic.*?:(.+?)(?=traitement|\n\d|\n$)/is);
     const treatmentMatch = content.match(/traitement.*?:(.+?)(?=suivi|\n\d|\n$)/is);
     const followUpMatch = content.match(/suivi.*?:(.+?)$/is);
