@@ -2,6 +2,7 @@
  * Service pour l'analyse de plantes
  * Gère la communication avec l'API serverless
  */
+import { processImageForUpload } from '../utils/imageCompression';
 
 // Analyser une image de plante
 export const analyzePlant = async (base64Image, progressCallback) => {
@@ -40,6 +41,11 @@ export const analyzePlant = async (base64Image, progressCallback) => {
       const errorText = await response.text();
       console.error('Erreur API:', response.status, errorText);
       
+      // Message d'erreur plus convivial pour l'erreur 413
+      if (response.status === 413) {
+        throw new Error("L'image est trop volumineuse pour être analysée. Veuillez utiliser une image plus petite.");
+      }
+      
       throw new Error(`Erreur d'analyse: ${response.status} - ${errorText}`);
     }
     
@@ -47,12 +53,6 @@ export const analyzePlant = async (base64Image, progressCallback) => {
     clearInterval(progressInterval);
     
     console.log("Résultat d'analyse obtenu:", result);
-    
-    // Vérifier si le résultat contient l'identification
-    if (!result.identification) {
-      console.warn("⚠️ La réponse ne contient pas d'identification - Format de réponse incorrect");
-      console.log("Contenu complet de la réponse:", JSON.stringify(result));
-    }
     
     // Signaler que l'analyse est terminée
     if (progressCallback) progressCallback(100);
@@ -64,21 +64,44 @@ export const analyzePlant = async (base64Image, progressCallback) => {
   }
 };
 
-// Fonction utilitaire pour lire un fichier en base64
-export const readFileAsBase64 = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+// Fonction utilitaire pour lire un fichier en base64 avec compression
+export const readFileAsBase64 = async (file) => {
+  try {
+    // Vérifier si l'image a déjà été compressée dans ImageUploader
+    if (file._compressedData) {
+      console.log("Image déjà compressée, utilisation des données existantes");
+      return file._compressedData;
+    }
     
-    reader.onload = () => {
-      resolve(reader.result);
-    };
+    // Vérifier la taille pour décider de la compression
+    if (file.size > 1 * 1024 * 1024) { // > 1MB
+      console.log(`Image non compressée détectée (${(file.size / 1024 / 1024).toFixed(2)}MB), compression...`);
+      
+      // Utiliser la compression d'image
+      const compressedBase64 = await processImageForUpload(file);
+      return compressedBase64;
+    } else {
+      console.log(`Petite image (${(file.size / 1024).toFixed(2)}KB), pas de compression nécessaire`);
+      
+      // Pour les petites images, pas besoin de compression
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+  } catch (error) {
+    console.error('Erreur lors du traitement de l\'image:', error);
     
-    reader.onerror = (error) => {
-      reject(error);
-    };
-    
-    reader.readAsDataURL(file);
-  });
+    // Fallback sur la méthode standard sans compression en cas d'erreur
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
 };
 
 // Validation des images
@@ -93,7 +116,7 @@ export const validateImage = (file) => {
   }
   
   // Validation de la taille (max 8MB)
-  const maxSize = 8 * 1024 * 1024; // 8MB
+  const maxSize = 8 * 1024 * 1024; // 8MB (corrigé)
   if (file.size > maxSize) {
     return {
       isValid: false,
@@ -102,17 +125,4 @@ export const validateImage = (file) => {
   }
   
   return { isValid: true };
-};
-
-// Fonction de test pour déboguer la réponse API
-export const testDebugResponse = async () => {
-  try {
-    const response = await fetch('/api/debug-response');
-    const result = await response.json();
-    console.log("Test de la réponse de débogage:", result);
-    return result;
-  } catch (error) {
-    console.error('Erreur lors du test de débogage:', error);
-    throw error;
-  }
 };
