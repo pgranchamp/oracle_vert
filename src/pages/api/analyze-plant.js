@@ -102,13 +102,24 @@ export default async function handler(req, res) {
     
     console.log("Image validée avec succès");
 
-    // Préparation des données pour OpenAI
-    const prompt = `Tu es un expert en botanique. Voici une photo d'une plante montrant des signes de souffrance.
-Analyse les feuilles, tiges et l'état général pour identifier d'éventuelles anomalies.
-Puis propose :
-1. Une hypothèse de diagnostic
-2. Un ou plusieurs traitements adaptés
-3. Une action de suivi simple si nécessaire
+    // Prompt modifié avec identification de plante
+    const prompt = `Tu es un expert en botanique et en identification de plantes. Voici une photo d'une plante montrant des signes de souffrance.
+
+1. D'abord, essaie d'identifier l'espèce de plante. Si tu peux l'identifier avec une confiance d'au moins 30%, indique son nom commun et son nom scientifique (latin). Sinon, indique que tu n'arrives pas à identifier cette plante avec suffisamment de certitude.
+
+2. Ensuite, analyse les feuilles, tiges et l'état général pour identifier d'éventuelles anomalies.
+
+3. Puis propose:
+   - Une hypothèse de diagnostic
+   - Un ou plusieurs traitements adaptés
+   - Une action de suivi simple si nécessaire
+
+Formate ta réponse comme suit:
+IDENTIFICATION: [Nom de la plante ou message d'incertitude]
+DIAGNOSTIC: [Ton diagnostic]
+TRAITEMENT: [Tes recommandations de traitement]
+SUIVI: [Tes conseils de suivi]
+
 Sois concis, clair et pédagogique.`;
 
     // Génération d'un ID unique pour cette analyse (pour logging/debugging)
@@ -132,7 +143,7 @@ Sois concis, clair et pédagogique.`;
           {
             role: "user",
             content: [
-              { type: "text", text: "Voici ma plante qui a des problèmes:" },
+              { type: "text", text: "Voici ma plante qui montre des signes de souffrance:" },
               {
                 type: "image_url",
                 image_url: {
@@ -175,12 +186,14 @@ Sois concis, clair et pédagogique.`;
     const content = result.choices[0].message.content;
     console.log(`Contenu extrait de la réponse pour l'analyse ${analysisId}`);
     
-    // Parsing simple du texte pour extraire les sections
-    const diagnosisMatch = content.match(/diagnostic.*?:(.+?)(?=traitement|\n\d|\n$)/is);
-    const treatmentMatch = content.match(/traitement.*?:(.+?)(?=suivi|\n\d|\n$)/is);
-    const followUpMatch = content.match(/suivi.*?:(.+?)$/is);
+    // Parsing du texte pour extraire les sections avec le nouveau format
+    const identificationMatch = content.match(/IDENTIFICATION:(.+?)(?=DIAGNOSTIC:|$)/is);
+    const diagnosisMatch = content.match(/DIAGNOSTIC:(.+?)(?=TRAITEMENT:|$)/is);
+    const treatmentMatch = content.match(/TRAITEMENT:(.+?)(?=SUIVI:|$)/is);
+    const followUpMatch = content.match(/SUIVI:(.+?)$/is);
     
     const parsedResponse = {
+      identification: identificationMatch ? identificationMatch[1].trim() : "Identification non disponible",
       diagnosis: diagnosisMatch ? diagnosisMatch[1].trim() : "Diagnostic non disponible",
       treatment: treatmentMatch ? treatmentMatch[1].trim() : "Traitement non disponible",
       followUp: followUpMatch ? followUpMatch[1].trim() : "Suivi non disponible"
@@ -193,10 +206,4 @@ Sois concis, clair et pédagogique.`;
     
   } catch (error) {
     console.error('Erreur serveur détaillée:', error.message, error.stack);
-    return res.status(500).json({ 
-      error: 'Erreur interne du serveur',
-      message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-  }
-}
+    return res.status(500).json({
