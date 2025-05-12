@@ -6,9 +6,12 @@
 // Analyser une image de plante
 export const analyzePlant = async (base64Image, progressCallback) => {
   try {
+    // Mise à jour de la progression
+    if (progressCallback) progressCallback(10);
+    
+    console.log("Début de l'appel API");
+    
     // Appel à notre API serverless
-    // IMPORTANT: Le chemin correct est /api/analyze-plant
-    // Next.js expose automatiquement ce chemin à partir du fichier dans pages/api/
     const response = await fetch('/api/analyze-plant', {
       method: 'POST',
       headers: {
@@ -20,31 +23,38 @@ export const analyzePlant = async (base64Image, progressCallback) => {
     });
     
     // Simuler la progression pendant l'analyse
-    let progress = 50;
+    let progress = 30;
     const progressInterval = setInterval(() => {
-      progress += 2;
+      progress += 3;
       if (progress >= 90) {
         clearInterval(progressInterval);
       }
       if (progressCallback) progressCallback(progress);
     }, 300);
     
+    console.log("Réponse reçue, statut:", response.status);
+    
     if (!response.ok) {
-      const errorData = await response.json();
       clearInterval(progressInterval);
-      throw new Error(errorData.error || 'Erreur serveur');
+      
+      const errorText = await response.text();
+      console.error('Erreur API:', response.status, errorText);
+      
+      throw new Error(`Erreur d'analyse: ${response.status} - ${errorText}`);
     }
     
     const result = await response.json();
     clearInterval(progressInterval);
+    
+    console.log("Résultat d'analyse obtenu:", result);
     
     // Signaler que l'analyse est terminée
     if (progressCallback) progressCallback(100);
     
     return result;
   } catch (error) {
-    console.error('Erreur lors de l\'analyse:', error);
-    throw error;
+    console.error('Erreur détaillée lors de l\'analyse:', error);
+    throw error; // Propager l'erreur au composant
   }
 };
 
@@ -76,12 +86,12 @@ export const validateImage = (file) => {
     };
   }
   
-  // Validation de la taille (max 5MB)
-  const maxSize = 5 * 1024 * 1024; // 5MB
+  // Validation de la taille (max 8MB)
+  const maxSize = 8 * 1024 * 1024; // 8MB
   if (file.size > maxSize) {
     return {
       isValid: false,
-      error: "L'image est trop volumineuse (maximum 5MB)"
+      error: "L'image est trop volumineuse (maximum 8MB)"
     };
   }
   
