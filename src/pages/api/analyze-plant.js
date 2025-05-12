@@ -61,6 +61,48 @@ const validateImage = (base64Image) => {
   return { valid: true };
 };
 
+// Fonction améliorée pour analyser le contenu de la réponse
+const parseResponseContent = (content) => {
+  console.log("Contenu à analyser:", content);
+  
+  // Essai avec le format attendu IDENTIFICATION, DIAGNOSTIC, etc.
+  const identificationMatch = content.match(/IDENTIFICATION:(.+?)(?=DIAGNOSTIC:|$)/is);
+  const diagnosisMatch = content.match(/DIAGNOSTIC:(.+?)(?=TRAITEMENT:|$)/is);
+  const treatmentMatch = content.match(/TRAITEMENT:(.+?)(?=SUIVI:|$)/is);
+  const followUpMatch = content.match(/SUIVI:(.+?)$/is);
+  
+  // Si le format attendu n'est pas trouvé, essayer l'ancien format
+  if (!identificationMatch && !diagnosisMatch) {
+    console.log("Format attendu non trouvé, essai avec l'ancien format...");
+    
+    // Essai avec l'ancien format (hypothèse de diagnostic, traitement recommandé, etc.)
+    const oldDiagnosisMatch = content.match(/diagnostic.*?:(.+?)(?=traitement|\n\d|\n$)/is) || 
+                              content.match(/problème.*?:(.+?)(?=traitement|\n\d|\n$)/is) ||
+                              content.match(/1\.?(.+?)(?=2\.?|traitement|\n\d|\n$)/is);
+                              
+    const oldTreatmentMatch = content.match(/traitement.*?:(.+?)(?=suivi|\n\d|\n$)/is) ||
+                              content.match(/2\.?(.+?)(?=3\.?|suivi|\n\d|\n$)/is);
+                              
+    const oldFollowUpMatch = content.match(/suivi.*?:(.+?)$/is) ||
+                             content.match(/3\.?(.+?)$/is);
+    
+    return {
+      identification: "Je n'arrive pas à identifier cette plante avec suffisamment de certitude. Voici néanmoins mes recommandations basées sur les symptômes visibles.",
+      diagnosis: oldDiagnosisMatch ? oldDiagnosisMatch[1].trim() : "Diagnostic non disponible",
+      treatment: oldTreatmentMatch ? oldTreatmentMatch[1].trim() : "Traitement non disponible",
+      followUp: oldFollowUpMatch ? oldFollowUpMatch[1].trim() : "Suivi non disponible"
+    };
+  }
+  
+  // Retourner la réponse avec le nouveau format
+  return {
+    identification: identificationMatch ? identificationMatch[1].trim() : "Identification non disponible",
+    diagnosis: diagnosisMatch ? diagnosisMatch[1].trim() : "Diagnostic non disponible",
+    treatment: treatmentMatch ? treatmentMatch[1].trim() : "Traitement non disponible",
+    followUp: followUpMatch ? followUpMatch[1].trim() : "Suivi non disponible"
+  };
+};
+
 // Handler principal
 export default async function handler(req, res) {
   console.log("API appelée: /api/analyze-plant");
@@ -102,7 +144,7 @@ export default async function handler(req, res) {
     
     console.log("Image validée avec succès");
 
-    // Prompt modifié avec identification de plante
+    // Prompt modifié avec identification de plante - AVEC EMPHASE SUR LE FORMAT
     const prompt = `Tu es un expert en botanique et en identification de plantes. Voici une photo d'une plante montrant des signes de souffrance.
 
 1. D'abord, essaie d'identifier l'espèce de plante. Si tu peux l'identifier avec une confiance d'au moins 30%, indique son nom commun et son nom scientifique (latin). Sinon, indique que tu n'arrives pas à identifier cette plante avec suffisamment de certitude.
@@ -114,13 +156,14 @@ export default async function handler(req, res) {
    - Un ou plusieurs traitements adaptés
    - Une action de suivi simple si nécessaire
 
-Formate ta réponse comme suit:
+TRÈS IMPORTANT: Tu DOIS impérativement formatter ta réponse EXACTEMENT comme ceci, en conservant les mots-clés IDENTIFICATION, DIAGNOSTIC, TRAITEMENT et SUIVI en majuscules suivis de deux points:
+
 IDENTIFICATION: [Nom de la plante ou message d'incertitude]
 DIAGNOSTIC: [Ton diagnostic]
 TRAITEMENT: [Tes recommandations de traitement]
 SUIVI: [Tes conseils de suivi]
 
-Sois concis, clair et pédagogique.`;
+Ne dévie PAS de ce format, n'ajoute PAS de numéros ou d'autres balises. Sois concis, clair et pédagogique.`;
 
     // Génération d'un ID unique pour cette analyse (pour logging/debugging)
     const analysisId = nanoid(10);
@@ -186,20 +229,10 @@ Sois concis, clair et pédagogique.`;
     const content = result.choices[0].message.content;
     console.log(`Contenu extrait de la réponse pour l'analyse ${analysisId}`);
     
-    // Parsing du texte pour extraire les sections avec le nouveau format
-    const identificationMatch = content.match(/IDENTIFICATION:(.+?)(?=DIAGNOSTIC:|$)/is);
-    const diagnosisMatch = content.match(/DIAGNOSTIC:(.+?)(?=TRAITEMENT:|$)/is);
-    const treatmentMatch = content.match(/TRAITEMENT:(.+?)(?=SUIVI:|$)/is);
-    const followUpMatch = content.match(/SUIVI:(.+?)$/is);
+    // Utilisation de la fonction améliorée de parsing
+    const parsedResponse = parseResponseContent(content);
     
-    const parsedResponse = {
-      identification: identificationMatch ? identificationMatch[1].trim() : "Identification non disponible",
-      diagnosis: diagnosisMatch ? diagnosisMatch[1].trim() : "Diagnostic non disponible",
-      treatment: treatmentMatch ? treatmentMatch[1].trim() : "Traitement non disponible",
-      followUp: followUpMatch ? followUpMatch[1].trim() : "Suivi non disponible"
-    };
-    
-    console.log(`Analyse ${analysisId} terminée avec succès, réponse formatée`);
+    console.log(`Analyse ${analysisId} terminée avec succès, réponse formatée:`, parsedResponse);
     
     // Envoi de la réponse formatée
     return res.status(200).json(parsedResponse);
