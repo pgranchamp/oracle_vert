@@ -154,7 +154,7 @@ export default async function handler(req, res) {
 3. Puis propose:
    - Une hypothèse de diagnostic
    - Un ou plusieurs traitements adaptés
-   - Une action de suivi simple si nécessaire en conseillant le recours aux experts de la CAPL pour aller plus loin 
+   - Une action de suivi simple si nécessaire en conseillant le recours aux experts de la CAPL pour aller plus loin. Mentionne explicitement la CAPL (Coopérative Agricole Provence Languedoc) 
 
 TRÈS IMPORTANT: Tu DOIS impérativement formatter ta réponse EXACTEMENT comme ceci, en conservant les mots-clés IDENTIFICATION, DIAGNOSTIC, TRAITEMENT et SUIVI en majuscules suivis de deux points:
 
