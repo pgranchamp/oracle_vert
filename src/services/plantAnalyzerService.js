@@ -7,6 +7,8 @@
 export const analyzePlant = async (base64Image, progressCallback) => {
   try {
     // Appel à notre API serverless
+    // IMPORTANT: Le chemin correct est /api/analyze-plant
+    // Next.js expose automatiquement ce chemin à partir du fichier dans pages/api/
     const response = await fetch('/api/analyze-plant', {
       method: 'POST',
       headers: {
@@ -14,12 +16,7 @@ export const analyzePlant = async (base64Image, progressCallback) => {
       },
       body: JSON.stringify({
         image: base64Image
-      }),
-      // Si vous utilisez une librairie qui supporte les callbacks de progression
-      // onUploadProgress: (progressEvent) => {
-      //   const progress = Math.round(50 + (progressEvent.loaded / progressEvent.total) * 40);
-      //   if (progressCallback) progressCallback(progress);
-      // }
+      })
     });
     
     // Simuler la progression pendant l'analyse
