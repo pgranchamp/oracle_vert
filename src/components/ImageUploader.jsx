@@ -15,7 +15,7 @@ const ImageUploader = ({ onImageSelect, isLoading }) => {
       return;
     }
     
-    // Validation de la taille (max 8MB)
+    // Validation de la taille (max 8MB) - CORRIGÉ: utilisation de l'opérateur *
     const maxSize = 8 * 1024 * 1024; // 8MB
     if (file.size > maxSize) {
       onImageSelect(null, "L'image est trop volumineuse (maximum 8MB)");
