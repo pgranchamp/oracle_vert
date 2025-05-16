@@ -1,9 +1,11 @@
 import React, { useRef, useState } from 'react';
-import { Camera, Upload, Loader } from 'lucide-react';
+import { Camera, Upload, Image, Loader } from 'lucide-react';
 import { processImageForUpload } from '../utils/imageCompression';
 
 const ImageUploader = ({ onImageSelect, isLoading }) => {
-  const fileInputRef = useRef(null);
+  // Référence vers deux inputs : un pour la caméra, un pour la galerie
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
   const [isCompressing, setIsCompressing] = useState(false);
 
   const handleImageChange = async (e) => {
@@ -18,7 +20,7 @@ const ImageUploader = ({ onImageSelect, isLoading }) => {
     }
     
     // Validation de la taille (max 8MB)
-    const maxSize = 8 * 1024 * 1024; // 8MB - corrigé: * au lieu de **
+    const maxSize = 8 * 1024 * 1024; // 8MB
     if (file.size > maxSize) {
       onImageSelect(null, "L'image est trop volumineuse (maximum 8MB)");
       return;
@@ -58,8 +60,14 @@ const ImageUploader = ({ onImageSelect, isLoading }) => {
     }
   };
   
-  const triggerFileInput = () => {
-    fileInputRef.current.click();
+  // Déclenche l'input pour la caméra
+  const triggerCameraInput = () => {
+    cameraInputRef.current.click();
+  };
+  
+  // Déclenche l'input pour la galerie
+  const triggerGalleryInput = () => {
+    galleryInputRef.current.click();
   };
 
   return (
@@ -68,61 +76,79 @@ const ImageUploader = ({ onImageSelect, isLoading }) => {
         Photographiez votre plante
       </h2>
       
-      <div className="flex justify-center mb-4">
+      <div className="flex justify-center space-x-4">
+        {/* Bouton pour prendre une photo avec la caméra */}
         <button 
-          onClick={triggerFileInput}
-          className="bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-full flex items-center justify-center"
+          onClick={triggerCameraInput}
+          className="bg-green-600 hover:bg-green-700 text-white py-3 px-5 rounded-full flex items-center justify-center flex-1"
           disabled={isLoading || isCompressing}
         >
           {isCompressing ? (
             <>
-              <Loader size={24} className="mr-2 animate-spin" />
+              <Loader size={20} className="mr-2 animate-spin" />
               Optimisation...
             </>
           ) : (
             <>
-              <Camera size={24} className="mr-2" />
-              Prendre une photo
+              <Camera size={20} className="mr-2" />
+              Prendre photo
             </>
           )}
         </button>
+        
+        {/* Bouton pour sélectionner depuis la galerie */}
+        <button 
+          onClick={triggerGalleryInput}
+          className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-5 rounded-full flex items-center justify-center flex-1"
+          disabled={isLoading || isCompressing}
+        >
+          {isCompressing ? (
+            <>
+              <Loader size={20} className="mr-2 animate-spin" />
+              Optimisation...
+            </>
+          ) : (
+            <>
+              <Image size={20} className="mr-2" />
+              Galerie
+            </>
+          )}
+        </button>
+        
+        {/* Input caché pour la caméra */}
         <input 
           type="file" 
-          ref={fileInputRef}
+          ref={cameraInputRef}
           onChange={handleImageChange}
           accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
           capture="environment"
           className="hidden"
         />
+        
+        {/* Input caché pour la galerie (sans attribut capture) */}
+        <input 
+          type="file" 
+          ref={galleryInputRef}
+          onChange={handleImageChange}
+          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+          className="hidden"
+        />
       </div>
       
-      <div className="text-center text-sm text-gray-500">
-        ou
+      {/* Zone explicative */}
+      <div className="mt-4 text-center text-xs text-gray-500">
+        <p>
+          Formats acceptés: JPG, PNG, WEBP, HEIC, HEIF (max 8MB)
+        </p>
       </div>
       
-      <div 
-        className={`mt-4 border-2 border-dashed border-green-300 rounded-lg p-4 text-center cursor-pointer hover:bg-green-50 ${(isLoading || isCompressing) ? 'opacity-50 pointer-events-none' : ''}`}
-        onClick={(isLoading || isCompressing) ? null : triggerFileInput}
-      >
-        {isCompressing ? (
-          <>
-            <Loader size={32} className="mx-auto mb-2 text-green-500 animate-spin" />
-            <p className="text-sm text-gray-600">
-              Optimisation de l'image en cours...
-            </p>
-          </>
-        ) : (
-          <>
-            <Upload size={32} className="mx-auto mb-2 text-green-500" />
-            <p className="text-sm text-gray-600">
-              Cliquez pour télécharger une image depuis votre galerie
-            </p>
-            <p className="text-xs text-gray-500 mt-2">
-              Formats acceptés: JPG, PNG, WEBP, HEIC, HEIF (max 8MB)
-            </p>
-          </>
-        )}
-      </div>
+      {/* Indicateur de compression */}
+      {isCompressing && (
+        <div className="mt-4 p-2 bg-gray-100 rounded-lg text-center">
+          <Loader size={20} className="inline mr-2 text-green-500 animate-spin" />
+          <span className="text-sm text-gray-700">Optimisation de l'image en cours...</span>
+        </div>
+      )}
     </section>
   );
 };
